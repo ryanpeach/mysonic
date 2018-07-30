@@ -11,3 +11,6 @@ rm huds.png
 rm jukebox.png
 rm misc-3.png
 rm dr-robotnik-death.png
+mkdir backgrounds
+mv *zone*.png backgrounds/
+mv *stage*.png backgrounds/
