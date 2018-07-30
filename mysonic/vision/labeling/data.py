@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import pdb
 
 IMAGE_SIZE = (50, 50)
-backgrounds = [Image.open(f).convert('RGBA') for f in Path('data/sprites/backgrounds/').glob('*.png')]
 
 def pil_loader(path):
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
@@ -17,41 +16,25 @@ def pil_loader(path):
         img = Image.open(f)
         return img.convert('RGBA')
 
-def apply_to_background(img):
-    w0, h0 = img.size  # PIL does this backwards
-    h1, w1 = IMAGE_SIZE  # We do it the right way
+class ApplyToBackground():
+    def __init__(self, path):
+        self.backgrounds = [Image.open(f).convert('RGBA') for f in Path(path).glob('*.png')]
 
-    # Pick a random background and crop it
-    i = randrange(0,len(backgrounds))
-    bg = backgrounds[i].copy()
-    bg = transforms.RandomCrop(IMAGE_SIZE)(bg)
+    def __call__(self, img):
+        w0, h0 = img.size  # PIL does this backwards
 
-    # If bg is bigger than img
-    if w1>=w0 and h1>=h0:
-        pass
+        # Pick a random background and crop it
+        i = randrange(0,len(self.backgrounds))
+        bg = self.backgrounds[i].copy()
+        bg = transforms.RandomCrop((h0, w0))(bg)
 
-    # If img is bigger than bg
-    elif w0>w1 and h0>h1:
-        img = transforms.RandomCrop(IMAGE_SIZE)(img)
+        return Image.alpha_composite(bg, img).convert("RGB")
 
-    # If img width is bigger than bg width, crop to image hight, bg width
-    elif w0>w1:
-        img = transforms.RandomCrop((h0,w1))(img)
-
-    # If img hight is bigger than bg hight, crop to image width, bg hight
-    elif h0>h1:
-        img = transforms.RandomCrop((h1,w0))(img)
-
-    w0, h0 = img.size  # PIL does this backwards
-    x0 = randrange(0,w1-w0+1)
-    y0 = randrange(0,h1-h0+1)
-    bg.paste(img, mask=img, box=(x0,y0))
-
-    return bg.convert("RGB")
 
 sprites_transform = transforms.Compose([
         transforms.RandomHorizontalFlip(),
-        apply_to_background,
+        transforms.RandomCrop(IMAGE_SIZE, pad_if_needed=True),
+        ApplyToBackground('data/sprites/backgrounds/'),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
