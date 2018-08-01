@@ -5,4 +5,4 @@ sklearn
 scipy
 jupyter
 torch
-torchvision
+git+git://github.com/ryanpeach/vision/tree/develop

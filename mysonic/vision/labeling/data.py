@@ -16,8 +16,10 @@ import os
 import time
 import copy
 
-IMAGE_SIZE = (256, 256)
+# REF: https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
 
+IMAGE_SIZE = (50, 50)
+INPUT_SIZE = (224, 224)
 
 def pil_loader(path):
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
@@ -45,6 +47,7 @@ sprites_transform = transforms.Compose([
         transforms.RandomHorizontalFlip(),
         transforms.RandomCrop(IMAGE_SIZE, pad_if_needed=True),
         ApplyToBackground('data/sprites/backgrounds/'),
+        transforms.Resize(INPUT_SIZE),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
@@ -71,14 +74,14 @@ def imshow(inp, title=None):
     plt.imshow(inp)
     if title is not None:
         plt.title(title)
-    plt.pause(5)  # pause a bit so that plots are updated
+    plt.pause(.01)  # pause a bit so that plots are updated
 
 inputs, classes = next(iter(dataloaders['train']))
 out = torchvision.utils.make_grid(inputs)
 imshow(out, title=[class_names[x] for x in classes])
 
-device = torch.device("cpu")
-#print("Device:", device)
+device = torch.device("cuda:0")
+print("Device:", device)
 
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     since = time.time()
@@ -175,31 +178,13 @@ def visualize_model(model, num_images=6):
         model.train(mode=was_training)
 
 
-model_ft = models.resnet18(pretrained=True)
-num_ftrs = model_ft.fc.in_features
-model_ft.fc = nn.Linear(num_ftrs, 2)
-
-model_ft = model_ft.to(device)
-
-criterion = nn.CrossEntropyLoss()
-
-# Observe that all parameters are being optimized
-optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
-
-# Decay LR by a factor of 0.1 every 7 epochs
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
-
-model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
-                       num_epochs=25)
-visualize_model(model_ft)
-
-model_conv = torchvision.models.resnet18(pretrained=True)
+model_conv = models.resnet18(pretrained=True)
 for param in model_conv.parameters():
     param.requires_grad = False
 
 # Parameters of newly constructed modules have requires_grad=True by default
 num_ftrs = model_conv.fc.in_features
-model_conv.fc = nn.Linear(num_ftrs, 2)
+model_conv.fc = nn.Linear(num_ftrs, len(class_names))
 
 model_conv = model_conv.to(device)
 
@@ -212,10 +197,14 @@ optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=0.001, momentum=0.9)
 # Decay LR by a factor of 0.1 every 7 epochs
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=7, gamma=0.1)
 
+visualize_model(model_conv, num_images=6)
+plt.suptitle('Before Training')
+
 model_conv = train_model(model_conv, criterion, optimizer_conv,
                          exp_lr_scheduler, num_epochs=25)
 
-visualize_model(model_conv)
+visualize_model(model_conv, num_images=6)
+plt.suptitle('After Training')
 
 plt.ioff()
 plt.show()
