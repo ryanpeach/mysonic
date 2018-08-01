@@ -1,0 +1,15 @@
+{
+	"folders":
+	[
+		{
+			"path": "."
+		}
+	],
+    "build_systems":
+    [
+        {
+            "name": "local-python3",
+            "shell_cmd": "PYTHONPATH=$folder:$PYTHONPATH python3 $file"
+        }
+    ]
+}
